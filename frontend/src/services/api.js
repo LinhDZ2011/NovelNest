@@ -5,7 +5,7 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
-// Request interceptor: automatically attach Authorization header if token exists
+// Bộ chặn request: tự động đính kèm tiêu đề Authorization nếu token tồn tại
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get("token");
@@ -17,7 +17,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: on 401, remove cookies and redirect to /login
+// Bộ chặn response: khi nhận lỗi 401, xóa cookie và chuyển hướng về /login
 api.interceptors.response.use(
   (response) => response,
   (error) => {

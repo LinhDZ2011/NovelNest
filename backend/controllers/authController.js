@@ -10,7 +10,7 @@ const signupUser = async (req, res) => {
             return res.status(400).send("Yêu cầu không hợp lệ. Vui lòng điền đầy đủ thông tin.");
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({
                 msg: "Email này đã được đăng ký tài khoản..."
@@ -18,10 +18,11 @@ const signupUser = async (req, res) => {
         }
 
         const newUser = new User({
-            name,
-            email,
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
             password,
             role: "user",
+            authProvider: "local",
             userimage: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167'
         });
 
@@ -41,10 +42,24 @@ const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await User.findOne({ email });
+        if (!email || !password) {
+            return res.status(400).json({
+                msg: "Vui lòng nhập đầy đủ thông tin đăng nhập..."
+            });
+        }
+
+        const identifier = email.trim();
+        // Hỗ trợ đăng nhập linh hoạt bằng cả email hoặc tên đăng nhập (ví dụ: Admin123)
+        const user = await User.findOne({
+            $or: [
+                { email: identifier.toLowerCase() },
+                { name: identifier }
+            ]
+        });
+
         if (!user) {
             return res.status(400).json({
-                msg: "Email không tồn tại trên hệ thống..."
+                msg: "Tài khoản hoặc email không tồn tại trên hệ thống..."
             });
         }
 
@@ -55,18 +70,22 @@ const loginUser = async (req, res) => {
             });
         }
 
-        const token = jwt.sign({ userId: user._id }, secret_key, { expiresIn: '1d' });
+        const token = jwt.sign({ userId: user._id, role: user.role }, secret_key, { expiresIn: '1d' });
         res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
+            maxAge: 24 * 60 * 60 * 1000 // Thời hạn 1 ngày
         });
+
+        const userResponse = user.toObject();
+        delete userResponse.password;
 
         return res.status(200).json({
             msg: "Đăng nhập thành công...",
             token,
-            userId: user._id
+            userId: user._id,
+            user: userResponse
         });
 
     } catch (error) {

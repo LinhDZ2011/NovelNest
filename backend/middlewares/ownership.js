@@ -3,7 +3,7 @@ const Novel = require('../models/Novel');
 const Review = require('../models/Review');
 const Post = require('../models/Post');
 
-// Check if user owns the novel (author) or is admin
+// Kiểm tra quyền sở hữu truyện (là tác giả của truyện) hoặc có quyền Quản trị viên (Admin)
 const checkNovelOwner = async (req, res, next) => {
     try {
         const novelId = req.params.id || req.params.novelId;
@@ -31,7 +31,7 @@ const checkNovelOwner = async (req, res, next) => {
     }
 };
 
-// Check if user has permission to upload chapter for this novel
+// Kiểm tra người dùng có quyền tải lên chương mới cho tác phẩm này hay không
 const checkChapterUploadPermission = async (req, res, next) => {
     try {
         const { novelId } = req.params;
@@ -59,7 +59,7 @@ const checkChapterUploadPermission = async (req, res, next) => {
     }
 };
 
-// Check if user owns the review or is admin
+// Kiểm tra người dùng có phải chủ sở hữu đánh giá hoặc là Quản trị viên
 const checkReviewOwner = async (req, res, next) => {
     try {
         const reviewId = req.params.reviewId || req.params.id;
@@ -87,7 +87,7 @@ const checkReviewOwner = async (req, res, next) => {
     }
 };
 
-// Check if user owns the post or is admin
+// Kiểm tra người dùng có phải tác giả của bài viết diễn đàn hoặc là Quản trị viên
 const checkPostOwner = async (req, res, next) => {
     try {
         const postId = req.params.id || req.params.postId;
@@ -118,6 +118,7 @@ const checkPostOwner = async (req, res, next) => {
 module.exports = {
     checkNovelOwner,
     checkChapterUploadPermission,
+    checkChapterEditPermission: checkChapterUploadPermission,
     checkReviewOwner,
     checkPostOwner
 };

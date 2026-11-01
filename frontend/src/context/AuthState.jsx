@@ -20,7 +20,7 @@ const AuthState = (props) => {
     try {
       const decoded = jwtDecode(token);
       if (!decoded || !decoded.exp) return false;
-      // If token is about to expire (less than 5 minutes), consider invalid
+      // Nếu token sắp hết hạn (dưới 5 phút), coi như không hợp lệ
       if (decoded.exp - Date.now() / 1000 < 300) {
         return false;
       }
@@ -30,7 +30,7 @@ const AuthState = (props) => {
     }
   }, []);
 
-  // Check token expiration periodically and clear expired tokens
+  // Định kỳ kiểm tra thời hạn token và đăng xuất nếu hết hạn
   useEffect(() => {
     const checkTokenExpiry = () => {
       const token = Cookies.get("token");

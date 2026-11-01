@@ -5,33 +5,33 @@ const connectDB = async () => {
         const conn = await mongoose.connect(MONGODB_URI);
         console.log(`MongoDB Connected: ${conn.connection.host}`);
 
-        // Handle connection errors after initial connection
+        // Xử lý các sự kiện lỗi phát sinh sau khi đã kết nối
         mongoose.connection.on('error', (err) => {
-            console.error(`MongoDB connection error: ${err}`);
+            console.error(`Lỗi kết nối MongoDB: ${err}`);
         });
 
         mongoose.connection.on('disconnected', () => {
-            console.warn('MongoDB disconnected. Attempting to reconnect...');
+            console.warn('Mất kết nối MongoDB. Đang thử kết nối lại...');
         });
 
         mongoose.connection.on('reconnected', () => {
-            console.log('MongoDB reconnected');
+            console.log('Đã kết nối lại thành công với MongoDB');
         });
 
-        // Handle process termination
+        // Xử lý đóng kết nối an toàn khi tiến trình ứng dụng kết thúc
         process.on('SIGINT', async () => {
             try {
                 await mongoose.connection.close();
-                console.log('MongoDB connection closed through app termination');
+                console.log('Đã đóng kết nối MongoDB khi tắt ứng dụng');
                 process.exit(0);
             } catch (err) {
-                console.error('Error closing MongoDB connection:', err);
+                console.error('Lỗi khi đóng kết nối MongoDB:', err);
                 process.exit(1);
             }
         });
 
     } catch (error) {
-        console.error(`Error connecting to MongoDB: ${error.message}`);
+        console.error(`Lỗi kết nối cơ sở dữ liệu MongoDB: ${error.message}`);
         process.exit(1);
     }
 };

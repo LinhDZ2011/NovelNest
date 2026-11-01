@@ -1,24 +1,20 @@
 import { useState, useEffect, useContext } from "react";
 import Navbar from "../components/Navbar";
-import Cookies from "js-cookie";
 import PostUpload from "../components/PostUpload";
-import { FaHeart, FaRegHeart, FaComment } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeContext from "../context/DarkModeContext";
+import AuthContext from "../context/AuthContext";
 import LoadingScreen from "../utils/LoadingScreen";
 import Footer from "../utils/Footer";
+import PostCard from "../components/PostCard";
 import api from "../services/api";
 
 const ForumPage = () => {
   const [posts, setPosts] = useState([]);
   const [showNewPostForm, setShowNewPostForm] = useState(false);
-  const [expandedComments, setExpandedComments] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [newComments, setNewComments] = useState({});
   const { isDarkMode } = useContext(DarkModeContext);
-
-  const userId = Cookies.get("userId");
-  const token = Cookies.get("token");
+  const { loggedUser } = useContext(AuthContext);
 
   useEffect(() => {
     fetchPosts();
@@ -27,7 +23,7 @@ const ForumPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500);
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -35,7 +31,7 @@ const ForumPage = () => {
     try {
       const response = await api.get('/posts');
       let sortedPosts = [...response.data];
-      sortedPosts.sort((a, b) => new Date(b.timeStamp) - new Date(a.timeStamp));
+      sortedPosts.sort((a, b) => new Date(b.createdAt || b.timeStamp) - new Date(a.createdAt || a.timeStamp));
       setPosts(sortedPosts);
     } catch (err) {
       console.error("Error fetching posts:", err);
@@ -43,7 +39,7 @@ const ForumPage = () => {
   };
 
   const handleLike = async (postId) => {
-    if (!userId || !token) return;
+    if (!loggedUser?._id) return;
     try {
       const response = await api.post(`/posts/${postId}/like`);
       setPosts((prevPosts) =>
@@ -56,26 +52,12 @@ const ForumPage = () => {
     }
   };
 
-  const toggleComments = (postId) => {
-    setExpandedComments((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-  };
-
-  const handleCommentChange = (postId, value) => {
-    setNewComments((prev) => ({
-      ...prev,
-      [postId]: value,
-    }));
-  };
-
-  const handleAddComment = async (postId) => {
-    if (!userId || !token || !newComments[postId]?.trim()) return;
+  const handleAddComment = async (postId, content) => {
+    if (!loggedUser?._id || !content.trim()) return;
 
     try {
       const response = await api.post(`/posts/${postId}/comments`, {
-        content: newComments[postId],
+        content: content.trim(),
       });
 
       setPosts((prevPosts) =>
@@ -85,12 +67,17 @@ const ForumPage = () => {
             : post
         )
       );
-      setNewComments((prev) => ({
-        ...prev,
-        [postId]: "",
-      }));
     } catch (error) {
       console.error("Error adding comment:", error);
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      await api.delete(`/posts/${postId}`);
+      setPosts((prev) => prev.filter((p) => p._id !== postId));
+    } catch (err) {
+      console.error("Error deleting post:", err);
     }
   };
 
@@ -102,276 +89,90 @@ const ForumPage = () => {
         <>
           <Navbar />
           <div
-            className={`min-h-screen pt-20 ${
+            className={`min-h-screen pt-24 pb-16 ${
               isDarkMode
-                ? "bg-gradient-to-br from-black to-gray-800 text-white"
-                : "bg-gray-50 text-gray-900"
+                ? "bg-gradient-to-br from-black via-gray-950 to-gray-900 text-white"
+                : "bg-gradient-to-br from-gray-50 via-white to-blue-50 text-gray-900"
             }`}
           >
-            <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto px-4">
+              {/* Thanh tạo bài viết mới */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`${
                   isDarkMode
-                    ? "bg-gradient-to-br from-gray-900 to-gray-800"
-                    : "bg-white"
-                } rounded-xl shadow-lg p-6 mb-8 backdrop-blur-lg border ${
-                  isDarkMode ? "border-gray-700" : "border-gray-200"
-                }`}
+                    ? "bg-gray-900/90 border-gray-800"
+                    : "bg-white border-gray-200"
+                } rounded-2xl shadow-xl p-5 mb-8 backdrop-blur-lg border`}
               >
-                <div className="flex items-center px-8">
-                  {/* <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
-                <i className="bx bx-user text-xl"></i>
-              </div> */}
+                <div className="flex items-center gap-4">
+                  <img
+                    src={
+                      loggedUser?.userimage ||
+                      "https://images.unsplash.com/photo-1511367461989-f85a21fda167"
+                    }
+                    alt={loggedUser?.name || "Người dùng"}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/30 shadow-md"
+                  />
                   <button
                     onClick={() => setShowNewPostForm(true)}
-                    className={`flex-1 text-left px-6 py-3 ${
+                    className={`flex-1 text-left px-5 py-3 text-sm md:text-base ${
                       isDarkMode
-                        ? "bg-black hover:bg-gray-600"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    } rounded-full transition-all duration-300 transform hover:-translate-y-0.5`}
+                        ? "bg-gray-800 hover:bg-gray-700/80 text-gray-300"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                    } rounded-xl transition-all duration-300 transform hover:-translate-y-0.5`}
                   >
-                    Chia sẻ suy nghĩ của bạn với cộng đồng...
+                    Chia sẻ suy nghĩ hoặc chủ đề thảo luận của bạn...
                   </button>
                   <motion.button
-                    whileHover={{ scale: 1.1 }}
+                    whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowNewPostForm(true)}
-                    className={`p-3 text-blue-500 ${
-                      isDarkMode ? "hover:bg-gray-700" : "hover:bg-blue-50"
-                    } rounded-full transition-colors`}
+                    className="px-5 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium text-sm rounded-xl shadow-md transition-all flex items-center gap-2"
                   >
-                    <i className="bx bx-image-alt text-2xl"></i>
+                    <span>Đăng bài</span>
                   </motion.button>
                 </div>
               </motion.div>
 
-              <div className="space-y-8">
+              {/* Danh sách bài viết diễn đàn (Template Method) */}
+              <div className="space-y-6">
                 <AnimatePresence>
-                  {posts.map((post, index) => (
-                    <motion.div
-                      key={post._id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.1 }}
-                      className={`${
-                        isDarkMode
-                          ? "bg-gradient-to-br from-gray-900 to-black"
-                          : "bg-white"
-                      } rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border ${
-                        isDarkMode ? "border-gray-700" : "border-gray-200"
-                      }`}
-                    >
-                      <div className="p-6">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
-                            {post.user.userimage ? (
-                              <img
-                                src={post.user.userimage}
-                                alt={post.user.name}
-                                className="w-full h-full rounded-full object-cover"
-                              />
-                            ) : (
-                              <i className="bx bx-user text-xl"></i>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h3
-                              className={`font-semibold text-lg ${
-                                isDarkMode ? "text-gray-100" : "text-gray-800"
-                              }`}
-                            >
-                              {post.title}
-                            </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                              <span>{post.user.name}</span>
-                              <span>•</span>
-                              <span>
-                                {new Date(post.createdAt).toLocaleString("vi-VN")}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {post.image && (
-                          <motion.div
-                            className="relative rounded-xl overflow-hidden mb-4"
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <img
-                              src={post.image.url}
-                              alt={post.title}
-                              className="w-full max-h-[500px] object-cover"
-                            />
-                          </motion.div>
-                        )}
-
-                        <p
-                          className={`whitespace-pre-wrap mb-6 ${
-                            isDarkMode ? "text-gray-300" : "text-gray-600"
-                          }`}
-                        >
-                          {post.content}
-                        </p>
-
-                        <div
-                          className={`flex items-center justify-between pt-4 border-t ${
-                            isDarkMode ? "border-gray-700" : "border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-6">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleLike(post._id)}
-                              className="flex items-center gap-2 transition-colors"
-                            >
-                              {post.likes?.includes(userId) ? (
-                                <FaHeart className="text-red-500 text-xl" />
-                              ) : (
-                                <FaRegHeart
-                                  className={`text-xl ${
-                                    isDarkMode
-                                      ? "text-gray-400 hover:text-red-400"
-                                      : "text-gray-500 hover:text-red-500"
-                                  }`}
-                                />
-                              )}
-                              <span
-                                className={
-                                  isDarkMode ? "text-gray-400" : "text-gray-600"
-                                }
-                              >
-                                {post.likes?.length || 0}
-                              </span>
-                            </motion.button>
-
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => toggleComments(post._id)}
-                              className={`flex items-center gap-2 ${
-                                isDarkMode
-                                  ? "text-gray-400 hover:text-blue-400"
-                                  : "text-gray-500 hover:text-blue-500"
-                              }`}
-                            >
-                              <FaComment className="text-xl" />
-                              <span>{post.comments?.length || 0}</span>
-                            </motion.button>
-
-                            {/* <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className={`flex items-center gap-2 ${
-                            isDarkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-500 hover:text-blue-500'
-                          }`}
-                        >
-                          <FaShare className="text-xl" />
-                        </motion.button> */}
-                          </div>
-
-                          {/* <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => toggleBookmark(post._id)}
-                        className={`${
-                          isDarkMode ? 'text-gray-400 hover:text-yellow-400' : 'text-gray-500 hover:text-yellow-500'
-                        }`}
-                      >
-                        {bookmarkedPosts[post._id] ? (
-                          <FaBookmark className="text-xl text-yellow-500" />
-                        ) : (
-                          <FaRegBookmark className="text-xl" />
-                        )}
-                      </motion.button> */}
-                        </div>
-
-                        <AnimatePresence>
-                          {expandedComments[post._id] && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="mt-6 space-y-4"
-                            >
-                              {post.comments?.map((comment) => (
-                                <motion.div
-                                  key={comment._id}
-                                  initial={{ opacity: 0, x: -20 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  className={`p-4 rounded-lg ${
-                                    isDarkMode ? "bg-gray-700" : "bg-gray-50"
-                                  }`}
-                                >
-                                  <p
-                                    className={
-                                      isDarkMode
-                                        ? "text-gray-200"
-                                        : "text-gray-700"
-                                    }
-                                  >
-                                    {comment.content}
-                                  </p>
-                                  <p
-                                    className={
-                                      isDarkMode
-                                        ? "text-gray-500"
-                                        : "text-gray-700"
-                                    }
-                                  >
-                                    {comment.user?.name || "Ẩn danh"}
-                                  </p>
-                                </motion.div>
-                              ))}
-
-                              <div className="flex items-center gap-3 mt-4">
-                                <input
-                                  type="text"
-                                  value={newComments[post._id] || ""}
-                                  onChange={(e) =>
-                                    handleCommentChange(
-                                      post._id,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Thêm bình luận..."
-                                  className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                                    isDarkMode
-                                      ? "bg-gray-700 text-gray-100 border-gray-600 focus:border-blue-500"
-                                      : "bg-gray-100 text-gray-900 border-gray-200 focus:border-blue-500"
-                                  } border focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
-                                />
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => handleAddComment(post._id)}
-                                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                                >
-                                  Đăng
-                                </motion.button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </motion.div>
-                  ))}
+                  {posts.length > 0 ? (
+                    posts.map((post) => (
+                      <PostCard
+                        key={post._id}
+                        post={post}
+                        currentUserId={loggedUser?._id}
+                        currentUserRole={loggedUser?.role}
+                        isDarkMode={isDarkMode}
+                        onLike={handleLike}
+                        onDelete={handleDeletePost}
+                        onAddComment={handleAddComment}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-16">
+                      <p className="text-gray-500 text-lg">
+                        Chưa có bài viết nào trên diễn đàn. Hãy là người đầu tiên mở đầu chủ đề!
+                      </p>
+                    </div>
+                  )}
                 </AnimatePresence>
               </div>
             </div>
 
-            <AnimatePresence>
-              {showNewPostForm && (
-                <PostUpload
-                  onClose={() => setShowNewPostForm(false)}
-                  onSuccess={fetchPosts}
-                />
-              )}
-            </AnimatePresence>
+            {/* Modal đăng bài */}
+            {showNewPostForm && (
+              <PostUpload
+                onClose={() => setShowNewPostForm(false)}
+                onSuccess={() => {
+                  fetchPosts();
+                  setShowNewPostForm(false);
+                }}
+              />
+            )}
           </div>
           <Footer />
         </>

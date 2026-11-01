@@ -3,7 +3,7 @@ const Novel = require("../models/Novel");
 const User = require("../models/User");
 const { toggleDocumentLike, toggleSubdocumentLike } = require("../utils/likeHelper");
 
-// Internal helper to populate review data
+// Hàm trợ giúp nội bộ để populate dữ liệu đánh giá
 const populateReviewQuery = (query) => {
     return query
         .populate("user", "-password")
@@ -13,38 +13,38 @@ const populateReviewQuery = (query) => {
         });
 };
 
-// Internal function to fetch reviews for a novel
+// Hàm nội bộ lấy tất cả đánh giá của một tác phẩm
 const fetchReviewsForNovel = async (novelId) => {
     return populateReviewQuery(Review.find({ novel: novelId })).sort({ createdAt: -1 });
 };
 
-// Add a review to a novel
+// Thêm mới một bài đánh giá cho tác phẩm
 const addReview = async (req, res) => {
     try {
         const { userId } = req.user;
         const { reviewTitle, reviewContent } = req.body;
         const novelId = req.params.novelId;
 
-        // Validate required fields
+        // Kiểm tra các trường bắt buộc
         if (!reviewTitle || !reviewContent) {
             return res
                 .status(400)
                 .json({ msg: "Vui lòng nhập đầy đủ tiêu đề và nội dung đánh giá" });
         }
 
-        // Check if user exists
+        // Kiểm tra người dùng tồn tại
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ msg: "Không tìm thấy người dùng" });
         }
 
-        // Check if novel exists
+        // Kiểm tra truyện tồn tại
         const novel = await Novel.findById(novelId);
         if (!novel) {
             return res.status(404).json({ msg: "Không tìm thấy truyện" });
         }
 
-        // Create new review
+        // Tạo bản ghi đánh giá mới
         const review = new Review({
             user: userId,
             novel: novelId,
@@ -54,14 +54,14 @@ const addReview = async (req, res) => {
             replies: [],
         });
 
-        // Save the review
+        // Lưu đánh giá vào DB
         await review.save();
 
-        // Add review reference to novel and user
+        // Thêm tham chiếu đánh giá vào truyện và người dùng
         await Novel.findByIdAndUpdate(novelId, { $push: { reviews: review._id } });
         await User.findByIdAndUpdate(userId, { $push: { reviews: review._id } });
 
-        // Populate user info before sending response
+        // Populate thông tin người dùng trước khi gửi phản hồi
         await review.populate("user", "-password");
 
         return res.status(201).json(review);
@@ -74,7 +74,7 @@ const addReview = async (req, res) => {
     }
 };
 
-// Get all reviews for a novel
+// Lấy tất cả đánh giá của một tác phẩm
 const getNovelReviews = async (req, res) => {
     try {
         const reviews = await fetchReviewsForNovel(req.params.novelId);
@@ -88,7 +88,7 @@ const getNovelReviews = async (req, res) => {
     }
 };
 
-// Add a reply to a review
+// Thêm phản hồi vào một đánh giá
 const addReplyToReview = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -99,19 +99,19 @@ const addReplyToReview = async (req, res) => {
             return res.status(400).json({ msg: "Vui lòng nhập nội dung phản hồi" });
         }
 
-        // Check if user exists
+        // Kiểm tra người dùng tồn tại
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ msg: "Không tìm thấy người dùng" });
         }
 
-        // Find the review
+        // Tìm bài đánh giá
         const review = await Review.findById(reviewId);
         if (!review) {
             return res.status(404).json({ msg: "Không tìm thấy đánh giá" });
         }
 
-        // Add reply to review
+        // Thêm phản hồi vào mảng replies của đánh giá
         review.replies.push({
             content,
             user: userId,
@@ -120,7 +120,7 @@ const addReplyToReview = async (req, res) => {
 
         await review.save();
 
-        // Populate user info in replies
+        // Populate thông tin người dùng trong các câu trả lời
         await review.populate("replies.user", "-password");
 
         return res.status(200).json(review);
@@ -133,7 +133,7 @@ const addReplyToReview = async (req, res) => {
     }
 };
 
-// Toggle like on a review
+// Thích hoặc bỏ thích một đánh giá
 const toggleReviewLike = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -157,7 +157,7 @@ const toggleReviewLike = async (req, res) => {
     }
 };
 
-// Toggle like on a reply
+// Thích hoặc bỏ thích một câu trả lời trong đánh giá
 const toggleReplyLike = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -181,32 +181,32 @@ const toggleReplyLike = async (req, res) => {
     }
 };
 
-// Delete a review
+// Xóa một đánh giá
 const deleteReview = async (req, res) => {
     try {
         const { reviewId } = req.params;
 
-        // Find the review
+        // Tìm bài đánh giá
         const review = await Review.findById(reviewId);
         if (!review) {
             return res.status(404).json({ msg: "Không tìm thấy đánh giá" });
         }
 
-        // Clean up orphan references
-        // 1. Remove from novel's reviews array
+        // Dọn dẹp các tham chiếu mồ côi
+        // 1. Xóa khỏi mảng reviews của truyện
         if (review.novel) {
             await Novel.findByIdAndUpdate(review.novel, {
                 $pull: { reviews: review._id }
             });
         }
 
-        // 2. Remove from user's reviews array
+        // 2. Xóa khỏi mảng reviews của người dùng
         await User.updateMany(
             { reviews: review._id },
             { $pull: { reviews: review._id } }
         );
 
-        // 3. Delete the review
+        // 3. Xóa bản ghi đánh giá
         await review.deleteOne();
 
         return res.status(200).json({ msg: "Xóa đánh giá thành công" });
@@ -219,7 +219,7 @@ const deleteReview = async (req, res) => {
     }
 };
 
-// Get a specific review by ID
+// Lấy thông tin một đánh giá cụ thể theo ID
 const getReviewsById = async (req, res) => {
     try {
         const { reviewId } = req.params;
@@ -239,7 +239,7 @@ const getReviewsById = async (req, res) => {
     }
 };
 
-// Get all reviews for a specific novel
+// Lấy tất cả đánh giá của một tác phẩm cụ thể
 const getReviewsByNovelId = async (req, res) => {
     try {
         const { novelId } = req.params;

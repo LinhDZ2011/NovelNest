@@ -118,7 +118,7 @@ const SignupPage = () => {
                 isDarkMode ? "text-white" : "text-[#060606]"
               } font-semibold mb-1 mt-10`}
             >
-              <span>Novel Hub</span>
+              <span>Novel Nest</span>
               <img
                 src={isDarkMode ? "/ink-logo-light.png" : "/ink-logo-dark.png"}
                 alt="Ink Logo"

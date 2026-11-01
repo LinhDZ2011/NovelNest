@@ -2,11 +2,15 @@ import { Link } from "react-router-dom";
 import { useContext } from "react";
 import DarkModeContext from "../context/DarkModeContext";
 
-const Book = ({ _id, title, description, coverPhoto }) => {
+const Book = ({ _id, title, description, coverPhoto, genres, genre }) => {
   const imageUrl = coverPhoto
     ? coverPhoto.url
     : "/ink-logo-outline.png";
   const { isDarkMode } = useContext(DarkModeContext);
+
+  const displayGenre = (genres && genres.length > 0)
+    ? (typeof genres[0] === 'object' ? genres[0] : { name: genres[0] })
+    : (genre ? (typeof genre === 'object' ? genre : { name: genre }) : null);
 
   return (
     <Link
@@ -29,6 +33,14 @@ const Book = ({ _id, title, description, coverPhoto }) => {
     >
       <div className="flex flex-col h-full relative z-10">
         <div className="relative overflow-hidden">
+          {displayGenre && (
+            <span
+              className="absolute top-2.5 left-2.5 z-20 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-md text-white backdrop-blur-sm"
+              style={{ backgroundColor: displayGenre.color || '#8B5CF6' }}
+            >
+              {displayGenre.name}
+            </span>
+          )}
           <img
             className="w-full h-72 object-cover transition-transform duration-500 hover:scale-110"
             src={imageUrl}

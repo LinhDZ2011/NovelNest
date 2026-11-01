@@ -11,13 +11,13 @@ const DisplayBooks = () => {
   const [visibleRows, setVisibleRows] = useState(2);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Grid settings
+  // Cấu hình hiển thị dạng lưới
   const getGridSettings = () => {
-    if (window.innerWidth >= 1280) return { booksPerRow: 5, gap: 'gap-8' }; // xl
-    if (window.innerWidth >= 1024) return { booksPerRow: 4, gap: 'gap-6' }; // lg
-    if (window.innerWidth >= 768) return { booksPerRow: 3, gap: 'gap-4' }; // md
-    if (window.innerWidth >= 640) return { booksPerRow: 2, gap: 'gap-4' }; // sm
-    return { booksPerRow: 1, gap: 'gap-4' }; // xs
+    if (window.innerWidth >= 1280) return { booksPerRow: 5, gap: 'gap-8' }; // Màn hình rất lớn (xl)
+    if (window.innerWidth >= 1024) return { booksPerRow: 4, gap: 'gap-6' }; // Màn hình lớn (lg)
+    if (window.innerWidth >= 768) return { booksPerRow: 3, gap: 'gap-4' }; // Màn hình trung bình (md)
+    if (window.innerWidth >= 640) return { booksPerRow: 2, gap: 'gap-4' }; // Màn hình nhỏ (sm)
+    return { booksPerRow: 1, gap: 'gap-4' }; // Màn hình rất nhỏ (xs)
   };
 
   const [gridSettings, setGridSettings] = useState(getGridSettings());
@@ -35,6 +35,7 @@ const DisplayBooks = () => {
   useEffect(() => {
     const fetchNovels = async () => {
       try {
+        setLoading(true);
         const response = await api.get('/novels');
         setNovels(response.data);
       } catch (err) {
@@ -77,8 +78,8 @@ const DisplayBooks = () => {
   const handleScroll = (e) => {
     if (scrollRef.current) {
       const scrollLeft = e.target.scrollLeft;
-      const cardWidth = 200; // Width of each card
-      const gap = 24; // Gap between cards (6 * 4px from gap-6)
+      const cardWidth = 200; // Độ rộng của mỗi thẻ truyện
+      const gap = 24; // Khoảng cách giữa các thẻ (6 * 4px từ gap-6)
       const totalWidth = cardWidth + gap;
       const newIndex = Math.round(scrollLeft / totalWidth);
       setActiveIndex(newIndex);
@@ -114,20 +115,21 @@ const DisplayBooks = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5, delay: rowIndex * 0.1 }}
-              className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${gridSettings.gap} justify-items-center`}
+              className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${gridSettings.gap} justify-items-center mb-6`}
             >
               {row.map((novel) => (
                 <motion.div
                   key={novel._id}
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.2 }}
-                  className="w-full max-w-[250px] p-4"
+                  className="w-full max-w-[250px] p-2"
                 >
                   <Book
                     _id={novel._id}
                     title={novel.title}
                     description={novel.description}
                     coverPhoto={novel.coverPhoto}
+                    genres={novel.genres}
                   />
                 </motion.div>
               ))}
@@ -156,18 +158,18 @@ const DisplayBooks = () => {
         <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
           <button
             onClick={() => scroll("left")}
-            className="p-2 rounded-full bg-white/80 shadow-lg hover:bg-white transition-colors"
+            className="p-2 rounded-full bg-white/80 dark:bg-gray-800 shadow-lg hover:bg-white transition-colors"
           >
-            <FaChevronLeft className="text-gray-800" />
+            <FaChevronLeft className="text-gray-800 dark:text-gray-200" />
           </button>
         </div>
 
         <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10">
           <button
             onClick={() => scroll("right")}
-            className="p-2 rounded-full bg-white/80 shadow-lg hover:bg-white transition-colors"
+            className="p-2 rounded-full bg-white/80 dark:bg-gray-800 shadow-lg hover:bg-white transition-colors"
           >
-            <FaChevronRight className="text-gray-800" />
+            <FaChevronRight className="text-gray-800 dark:text-gray-200" />
           </button>
         </div>
 
@@ -191,6 +193,7 @@ const DisplayBooks = () => {
                 title={novel.title}
                 description={novel.description}
                 coverPhoto={novel.coverPhoto}
+                genres={novel.genres}
               />
             </motion.div>
           ))}

@@ -106,6 +106,27 @@ const NovelCover = ({ novel, onLike, isLiked }) => {
                 {novel.author?.penName || "Tác giả ẩn danh"}
               </span>
             </p>
+
+            {/* Dãy huy hiệu Thể loại (Genre Badges) - Click để lọc */}
+            {novel.genres && novel.genres.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className={`text-sm font-semibold ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                  Thể loại:
+                </span>
+                {novel.genres.map((genre) => (
+                  <button
+                    key={genre._id || genre.slug}
+                    onClick={() => navigate(`/search?genre=${genre.slug}`)}
+                    className="px-3.5 py-1 rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer text-white border border-white/20"
+                    style={{ backgroundColor: genre.color || "#8B5CF6" }}
+                    title={`Xem thêm tác phẩm thuộc thể loại ${genre.name}`}
+                  >
+                    #{genre.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div>
               <h2
                 className={`text-2xl font-extrabold mb-4 transition-colors duration-300 ${

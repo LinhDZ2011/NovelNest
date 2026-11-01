@@ -15,10 +15,10 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false); // Loading state
-  const [error, setError] = useState(""); // Error message state
+  const [loading, setLoading] = useState(false); // Trạng thái đang tải
+  const [error, setError] = useState(""); // Trạng thái thông báo lỗi
 
-  const navigate = useNavigate(); // For navigation after login
+  const navigate = useNavigate(); // Điều hướng sau khi đăng nhập
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -27,15 +27,15 @@ const LoginPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handler for form submission
+  // Xử lý gửi biểu mẫu đăng nhập
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Validate email
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex for valid email
-    const domainPattern = /^[^\d@]+$/; // Domain part should not contain numbers
+    // Kiểm tra tính hợp lệ của email
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Biểu thức chính quy cho email hợp lệ
+    const domainPattern = /^[^\d@]+$/; // Tên miền không được chứa chữ số
 
     if (
       !emailPattern.test(email) ||
@@ -53,21 +53,21 @@ const LoginPage = () => {
         password,
       });
 
-      // Setting up cookies to store the token
+      // Thiết lập cookie để lưu trữ token
       if (rememberMe) {
         const token = response.data.token;
         const userId = response.data.userId;
         Cookies.set("token", token, { expires: 1 });
         Cookies.set("userId", userId, { expires: 1 });
       } else {
-        // Session token
+        // Token phiên làm việc
         const token = response.data.token;
         const userId = response.data.userId;
         Cookies.set("token", token);
         Cookies.set("userId", userId);
       }
 
-      // Redirect to dashboard or home page
+      // Chuyển hướng về trang chủ hoặc trang cá nhân
       navigate("/home");
       window.location.reload();
       update();
@@ -133,7 +133,7 @@ const LoginPage = () => {
                 isDarkMode ? "text-white" : "text-[#060606]"
               } font-semibold mb-1 mt-10`}
             >
-              <span>Novel Hub</span>
+              <span>Novel Nest</span>
               <img
                 src={isDarkMode ? "/ink-logo-light.png" : "/ink-logo-dark.png"}
                 alt="Ink Logo"

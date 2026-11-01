@@ -14,7 +14,7 @@ const LoadingScreen = () => {
           ></iframe>
         </div>
         {/* <h2 className={`mt-4 text-2xl font-bold animate-pulse ${isDarkMode ? 'text-white' : 'text-black'} flex items-center justify-center`}>
-          Novel Hub
+          Novel Nest
         </h2>
         <p className={`mt-2 ${isDarkMode ? 'text-white/80' : 'text-black/80'} flex items-center justify-center`}>
           Loading your literary adventure...

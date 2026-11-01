@@ -37,6 +37,10 @@ const novelSchema = new mongoose.Schema({
     ref: 'Author',
     required: true
   },
+  genres: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Genre'
+  }],
   chapters: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Chapter'
@@ -49,8 +53,10 @@ const novelSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Add text index for search functionality
+// Thêm chỉ mục văn bản (text index) phục vụ chức năng tìm kiếm
 novelSchema.index({ title: 'text', description: 'text' });
+// Chỉ mục lọc theo thể loại
+novelSchema.index({ genres: 1 });
 
 const Novel = mongoose.model('Novel', novelSchema);
 module.exports = Novel;

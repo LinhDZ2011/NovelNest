@@ -5,12 +5,12 @@ const isLoggedIn = require('../authentication/authentication');
 const upload = require('../middlewares/cloudinaryStore');
 const { checkNovelOwner } = require('../middlewares/ownership');
 
-// Public routes
+// Các tuyến đường công khai (không bắt buộc đăng nhập)
 novelRouter.get('/', novelController.getAllNovels);
 novelRouter.get('/search', novelController.searchNovels);
 novelRouter.get('/:id', novelController.getNovelById);
 
-// Protected routes (require authentication)
+// Các tuyến đường bảo vệ (yêu cầu đăng nhập và phân quyền)
 novelRouter.post('/', isLoggedIn, upload.fields([
     { name: 'coverPhoto', maxCount: 1 },
     { name: 'introVideo', maxCount: 1 }

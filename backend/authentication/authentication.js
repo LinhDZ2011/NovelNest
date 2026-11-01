@@ -21,7 +21,7 @@ function verifyToken(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, secret_key);
-        req.user = decoded; // Attach decoded user info to request
+        req.user = decoded; // Gán thông tin người dùng đã giải mã vào đối tượng request
         next();
     } catch (error) {
         console.error('JWT Error:', error.message);

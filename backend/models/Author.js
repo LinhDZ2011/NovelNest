@@ -30,7 +30,7 @@ const authorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Add text index for search functionality
+// Thêm chỉ mục văn bản (text index) phục vụ chức năng tìm kiếm
 authorSchema.index({ penName: 'text', bio: 'text' });
 
 const Author = mongoose.model('Author', authorSchema);

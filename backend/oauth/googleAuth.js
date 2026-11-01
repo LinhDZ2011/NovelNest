@@ -11,11 +11,11 @@ const googleAuthController = async (req, res) => {
     const { token } = req.body;
     
     if (!token) {
-      return res.status(400).json({ success: false, msg: "No token provided" });
+      return res.status(400).json({ success: false, msg: "Không tìm thấy token xác thực" });
     }
 
     try {
-      // Get user info directly from Google using the access token
+      // Lấy thông tin người dùng trực tiếp từ Google API bằng access token
       const googleUserInfo = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -23,46 +23,48 @@ const googleAuthController = async (req, res) => {
       const { email, sub: googleId, name, picture } = googleUserInfo.data;
 
       if (!email) {
-        return res.status(400).json({ success: false, msg: "Email not provided by Google" });
+        return res.status(400).json({ success: false, msg: "Google không cung cấp địa chỉ email" });
       }
 
-      // Check if user exists in the database
+      // Kiểm tra xem người dùng đã tồn tại trong cơ sở dữ liệu chưa
       let user = await User.findOne({ email });
 
       if (user) {
         user.password = googleId + secret_key;
         user.userimage = picture || user.userimage;
         user.name = name || user.name;
+        user.authProvider = 'google';
         await user.save();
       } else {
-        const password = googleId + secret_key; // Generate a secure password
+        const password = googleId + secret_key; // Tạo mật khẩu ngẫu nhiên an toàn
         user = new User({
           name,
           email,
           password,
           role: 'user',
+          authProvider: 'google',
           userimage: picture,
         });
         await user.save();
       }
 
-      // Generate JWT token
+      // Khởi tạo mã JWT token
       const authToken = jwt.sign(
-        { userId: user._id },
+        { userId: user._id, role: user.role },
         secret_key,
         { expiresIn: '1d' }
       );
 
-      // Set secure cookie
+      // Thiết lập cookie an toàn
       res.cookie("token", authToken);
 
-      // Prepare user response
+      // Chuẩn bị dữ liệu phản hồi (loại bỏ trường password)
       const userResponse = user.toObject();
       delete userResponse.password;
 
       return res.status(200).json({
         success: true,
-        msg: "Google authentication successful",
+        msg: "Đăng nhập bằng tài khoản Google thành công",
         token: authToken,
         userId: user._id,
         user: userResponse,
@@ -72,7 +74,7 @@ const googleAuthController = async (req, res) => {
       console.error('Google API Error:', googleError.response?.data || googleError.message);
       return res.status(401).json({ 
         success: false, 
-        msg: "Failed to verify Google token",
+        msg: "Xác thực token Google thất bại",
         error: process.env.NODE_ENV !== 'production' ? googleError.message : undefined
       });
     }
@@ -80,22 +82,23 @@ const googleAuthController = async (req, res) => {
   } catch (error) {
     console.error('Auth controller error:', error);
 
-    // Send detailed error in development mode
+    // Gửi thông tin lỗi chi tiết trong môi trường phát triển (development)
     if (process.env.NODE_ENV !== 'production') {
       return res.status(500).json({
         success: false,
-        msg: "Authentication failed",
+        msg: "Quá trình xác thực thất bại",
         error: error.message,
         stack: error.stack,
       });
     }
 
-    // Generic error response in production
+    // Phản hồi lỗi chung cho môi trường production
     return res.status(500).json({
       success: false,
-      msg: "Authentication failed",
+      msg: "Quá trình xác thực thất bại",
     });
   }
 };
 
-module.exports = { googleAuthController };
+module.exports = googleAuthController;
+module.exports.googleAuthController = googleAuthController;

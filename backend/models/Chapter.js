@@ -23,7 +23,7 @@ const chapterSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure chapter numbers are unique within a novel
+// Đảm bảo số thứ tự chương là duy nhất trong cùng một truyện
 chapterSchema.index({ novel: 1, chapterNumber: 1 }, { unique: true });
 
 const Chapter = mongoose.model('Chapter', chapterSchema);

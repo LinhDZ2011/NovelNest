@@ -36,7 +36,7 @@ function Forum() {
     if (posts.length === 0) return;
     const intervalId = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % posts.length);
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(intervalId);
   }, [posts]);
@@ -83,6 +83,9 @@ function Forum() {
     );
   }
 
+  const currentPost = posts[currentIndex];
+  const postImageUrl = currentPost?.image?.url;
+
   return (
     <div className={`relative overflow-hidden rounded-xl ${
       isDarkMode ? 'bg-gray-900' : 'bg-white'
@@ -94,121 +97,135 @@ function Forum() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -100 }}
           transition={{ duration: 0.5 }}
-          className={`relative h-[300px] md:h-[400px] rounded-xl overflow-hidden cursor-pointer ${
-            isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-          } transition-colors duration-300`}
+          className="group relative h-[300px] md:h-[400px] rounded-xl overflow-hidden cursor-pointer"
           onClick={() => navigate("/forum")}
         >
-          {/* Background Gradient */}
-          <div className="absolute inset-0">
-            <div className={`w-full h-full ${
-              isDarkMode 
-                ? 'bg-black/50' 
-                : 'bg-gray-100/50'
-            }`}></div>
+          {/* Background Image: Làm mờ hình ảnh đính kèm bài viết giống WeeklyBest (Ảnh 2) */}
+          <div className="absolute inset-0 overflow-hidden">
+            {postImageUrl ? (
+              <img
+                src={postImageUrl}
+                alt={currentPost.title || "Hình nền bài viết"}
+                className="w-full h-full object-cover filter blur-md scale-110 transform transition-transform duration-700 group-hover:scale-115"
+              />
+            ) : (
+              <div
+                className={`w-full h-full ${
+                  isDarkMode
+                    ? "bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950"
+                    : "bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100"
+                }`}
+              />
+            )}
+            {/* Lớp phủ gradient làm mờ để chữ luôn sắc nét và dễ đọc */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/50" />
           </div>
 
-          {/* Content */}
-          <div className="relative h-full flex flex-col md:flex-row items-center p-4 md:p-8">
-            <div className="flex flex-col gap-4 md:gap-6 w-full md:w-auto">
-              {/* Author Info */}
-              <motion.div
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="flex items-center gap-4"
-              >
-                <div className={`p-3 md:p-4 rounded-lg ${
-                  isDarkMode 
-                    ? 'bg-gradient-to-r from-blue-900 to-purple-900' 
-                    : 'bg-gradient-to-r from-blue-500 to-purple-500'
-                }`}>
-                  <FaComments className="text-white text-xl md:text-3xl" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <FaUser className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
-                  <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                    bởi {posts[currentIndex].user?.name || "Ẩn danh"}
-                  </span>
-                </div>
-              </motion.div>
-
-              {/* Post Content */}
-              <div className={`max-w-full md:max-w-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                <motion.h3
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-xl md:text-2xl font-bold mb-2 md:mb-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent line-clamp-2"
+          {/* Nội dung bài viết */}
+          <div className="relative h-full flex items-center p-6 md:p-10 z-10">
+            <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 w-full">
+              {/* Ảnh thu nhỏ đại diện (Thumbnail card) nếu bài viết có ảnh đính kèm */}
+              {postImageUrl && (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="hidden sm:block flex-shrink-0 w-32 h-32 md:w-44 md:h-52 rounded-xl overflow-hidden shadow-2xl border border-white/20 bg-black/40"
                 >
-                  {posts[currentIndex].title}
-                </motion.h3>
+                  <img
+                    src={postImageUrl}
+                    alt={currentPost.title}
+                    className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-300"
+                  />
+                </motion.div>
+              )}
 
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className={`text-sm md:text-lg mb-4 md:mb-6 line-clamp-2 md:line-clamp-3 ${
-                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                  }`}
+              <div className="flex flex-col gap-3 md:gap-4 w-full md:max-w-xl text-white">
+                {/* Thông tin tác giả */}
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-center gap-3"
                 >
-                  {posts[currentIndex].content}
-                </motion.p>
+                  <div className="p-2.5 md:p-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md">
+                    <FaComments className="text-lg md:text-xl" />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-200">
+                    <FaUser className="text-gray-400" />
+                    <span>bởi {currentPost.user?.name || "Ẩn danh"}</span>
+                  </div>
+                </motion.div>
 
-                {/* Stats */}
+                {/* Tiêu đề & Nội dung */}
+                <div>
+                  <motion.h3
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-xl md:text-3xl font-extrabold mb-2 md:mb-3 bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent line-clamp-1"
+                  >
+                    {currentPost.title}
+                  </motion.h3>
+
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-sm md:text-base text-gray-200 line-clamp-2 md:line-clamp-3 leading-relaxed mb-4"
+                  >
+                    {currentPost.content}
+                  </motion.p>
+                </div>
+
+                {/* Thống kê tương tác */}
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
-                  className="flex gap-6 md:gap-10 text-sm md:text-base"
+                  className="flex items-center gap-6 text-sm text-gray-300"
                 >
                   <div className="flex items-center gap-2">
                     <FaHeart className="text-red-500" />
-                    <span>{posts[currentIndex].likes?.length || 0} lượt thích</span>
+                    <span>{currentPost.likes?.length || 0} lượt thích</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <FaComments className="text-blue-500" />
-                    <span>{posts[currentIndex].comments?.length || 0} bình luận</span>
+                    <FaComments className="text-blue-400" />
+                    <span>{currentPost.comments?.length || 0} bình luận</span>
                   </div>
                 </motion.div>
               </div>
             </div>
           </div>
 
-          {/* Navigation Controls - Hidden on Mobile */}
-          <div className="hidden md:flex absolute inset-y-0 left-0 items-center">
+          {/* Navigation Controls: Tự động ẩn khi không hover, hiện lên khi di chuột vào (group-hover) */}
+          <div className="hidden md:flex absolute inset-y-0 left-0 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrevious();
               }}
-              className={`p-2 m-4 rounded-full transition-colors duration-300 ${
-                isDarkMode 
-                  ? 'bg-gray-800 hover:bg-gray-700 text-white' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
+              aria-label="Bài viết trước"
+              className="p-3 m-4 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition-all duration-300 hover:scale-110 shadow-xl border border-white/20 active:scale-95"
             >
-              <FaChevronLeft size={24} />
+              <FaChevronLeft size={20} />
             </button>
           </div>
-          <div className="hidden md:flex absolute inset-y-0 right-0 items-center">
+          <div className="hidden md:flex absolute inset-y-0 right-0 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleNext();
               }}
-              className={`p-2 m-4 rounded-full transition-colors duration-300 ${
-                isDarkMode 
-                  ? 'bg-gray-800 hover:bg-gray-700 text-white' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
+              aria-label="Bài viết tiếp theo"
+              className="p-3 m-4 rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition-all duration-300 hover:scale-110 shadow-xl border border-white/20 active:scale-95"
             >
-              <FaChevronRight size={24} />
+              <FaChevronRight size={20} />
             </button>
           </div>
 
           {/* Navigation Dots */}
-          <div className="absolute bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
             {posts.map((_, index) => (
               <button
                 key={index}
@@ -216,14 +233,11 @@ function Forum() {
                   e.stopPropagation();
                   setCurrentIndex(index);
                 }}
-                className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
+                aria-label={`Chuyển đến bài viết ${index + 1}`}
+                className={`h-2.5 rounded-full transition-all duration-300 ${
                   currentIndex === index
-                    ? isDarkMode 
-                      ? 'bg-white scale-125' 
-                      : 'bg-gray-800 scale-125'
-                    : isDarkMode
-                      ? 'bg-gray-600 hover:bg-gray-500'
-                      : 'bg-gray-300 hover:bg-gray-400'
+                    ? 'w-6 bg-white shadow-md'
+                    : 'w-2.5 bg-white/40 hover:bg-white/70'
                 }`}
               />
             ))}

@@ -15,7 +15,7 @@ const uploadChapter = async (req, res) => {
             return res.status(404).json({ msg: "Không tìm thấy truyện" });
         }
 
-        // Retry on duplicate key error (E11000)
+        // Thử lại nếu gặp lỗi trùng khóa (E11000)
         let newChapter = null;
         for (let attempt = 0; attempt < 2; attempt++) {
             try {
@@ -33,7 +33,7 @@ const uploadChapter = async (req, res) => {
                 break;
             } catch (err) {
                 if ((err.code === 11000 || err.message?.includes('E11000')) && attempt === 0) {
-                    continue; // Retry once
+                    continue; // Thử lại một lần
                 }
                 throw err;
             }
@@ -83,8 +83,38 @@ const getChaptersByNovelId = async (req, res) => {
     }
 };
 
+// Cập nhật tên chương và nội dung văn bản chương (Tác giả hoặc Admin)
+const updateChapter = async (req, res) => {
+    try {
+        const { novelId, chapterId } = req.params;
+        const { chapterName, chapterContent } = req.body;
+
+        if (!chapterName || !chapterContent) {
+            return res.status(400).json({ msg: "Vui lòng nhập tên chương và nội dung chương." });
+        }
+
+        const chapter = await Chapter.findOne({ _id: chapterId, novel: novelId });
+        if (!chapter) {
+            return res.status(404).json({ msg: "Không tìm thấy chương cần chỉnh sửa" });
+        }
+
+        chapter.chapterName = chapterName.trim();
+        chapter.chapterContent = chapterContent.trim();
+        await chapter.save();
+
+        return res.status(200).json({
+            msg: "Cập nhật nội dung chương thành công",
+            chapter
+        });
+    } catch (error) {
+        console.error('Update chapter error:', error);
+        return res.status(500).json({ msg: "Không thể cập nhật nội dung chương" });
+    }
+};
+
 module.exports = {
     uploadChapter,
     getChapterById,
     getChaptersByNovelId,
+    updateChapter
 };

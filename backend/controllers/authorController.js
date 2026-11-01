@@ -1,57 +1,82 @@
 const Author = require('../models/Author');
 const User = require('../models/User');
+const AuthorRequest = require('../models/AuthorRequest');
 
-const applyForAuthor = async (req, res) => {
+// Người dùng gửi đơn đăng ký để trở thành tác giả
+const submitAuthorRequest = async (req, res) => {
     try {
         const { userId } = req.user;
-        const { penName, bio } = req.body;
+        const { penName, bio, reason } = req.body;
 
-        if (!userId || !penName || !bio) {
-            return res.status(400).json({ msg: "Vui lòng nhập đầy đủ bút danh và giới thiệu bản thân." });
+        if (!penName || !penName.trim()) {
+            return res.status(400).json({ msg: "Vui lòng nhập bút danh mong muốn." });
         }
 
-        // Check if user exists and is not already an author
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ msg: "Không tìm thấy người dùng." });
         }
 
         if (user.role === "author") {
-            return res.status(400).json({ msg: "Người dùng đã là tác giả." });
+            return res.status(400).json({ msg: "Bạn đã là tác giả trên hệ thống." });
         }
 
-        // Check if penName is already taken
-        const existingAuthor = await Author.findOne({ penName });
-        if (existingAuthor) {
-            return res.status(400).json({ msg: "Bút danh này đã được sử dụng." });
+        // Kiểm tra xem bút danh đã được sử dụng bởi tác giả khác chưa
+        const existingAuthor = await Author.findOne({ penName: penName.trim() });
+        if (existingAuthor && existingAuthor.user.toString() !== user._id.toString()) {
+            return res.status(400).json({ msg: "Bút danh này đã được sử dụng bởi tác giả khác." });
         }
 
-        // Create new author
-        const newAuthor = new Author({
-            user: userId,
-            penName,
-            bio,
-            novels: []
-        });
+        let request = await AuthorRequest.findOne({ user: userId });
+        if (request) {
+            if (request.status === 'pending') {
+                return res.status(400).json({ msg: "Bạn đã có đơn đăng ký đang chờ xét duyệt." });
+            }
+            // Nếu trước đó đã bị từ chối hoặc đã duyệt, cập nhật lại trạng thái thành chờ duyệt (pending)
+            request.penName = penName.trim();
+            request.bio = bio ? bio.trim() : '';
+            request.reason = reason ? reason.trim() : '';
+            request.status = 'pending';
+            request.adminNote = '';
+            request.reviewedBy = undefined;
+            request.reviewedAt = undefined;
+            await request.save();
+        } else {
+            request = new AuthorRequest({
+                user: userId,
+                penName: penName.trim(),
+                bio: bio ? bio.trim() : '',
+                reason: reason ? reason.trim() : '',
+                status: 'pending'
+            });
+            await request.save();
+        }
 
-        // Save the author
-        await newAuthor.save();
-
-        // Update user role
-        user.role = "author";
-        await user.save();
-
-        // Populate user info before sending response
-        await newAuthor.populate('user', '-password');
-
-        return res.status(200).json({ 
-            msg: "Bạn đã đăng ký làm tác giả thành công.", 
-            author: newAuthor 
+        return res.status(200).json({
+            msg: "Gửi đơn xin làm tác giả thành công! Vui lòng chờ quản trị viên phê duyệt.",
+            request
         });
     } catch (error) {
-        console.error('Apply for author error:', error);
-        return res.status(500).json({ msg: "Lỗi máy chủ nội bộ" });
+        console.error('Submit author request error:', error);
+        return res.status(500).json({ msg: "Lỗi máy chủ nội bộ khi gửi đơn" });
     }
+};
+
+// Người dùng lấy trạng thái đơn đăng ký tác giả của chính mình
+const getMyAuthorRequest = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const request = await AuthorRequest.findOne({ user: userId });
+        return res.status(200).json(request || null);
+    } catch (error) {
+        console.error('Get my author request error:', error);
+        return res.status(500).json({ msg: "Không thể lấy thông tin đơn tác giả" });
+    }
+};
+
+// Endpoint dự phòng tương thích ngược
+const applyForAuthor = async (req, res) => {
+    return submitAuthorRequest(req, res);
 };
 
 const getAuthors = async (req, res) => {
@@ -109,6 +134,8 @@ const getAuthorByUserId = async (req, res) => {
 };
 
 module.exports = {
+    submitAuthorRequest,
+    getMyAuthorRequest,
     applyForAuthor,
     getAuthors,
     getAuthorById,

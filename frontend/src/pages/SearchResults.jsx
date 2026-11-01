@@ -3,26 +3,28 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import DarkModeContext from "../context/DarkModeContext";
-import { FaBookOpen, FaHeart } from "react-icons/fa";
+import { FaBookOpen, FaHeart, FaSearch } from "react-icons/fa";
 import Footer from "../utils/Footer";
 import api from "../services/api";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const [results, setResults] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isDarkMode } = useContext(DarkModeContext);
   const navigate = useNavigate();
 
-  const query = searchParams.get("q");
+  const query = searchParams.get("q") || "";
+  const genreParam = searchParams.get("genre") || "";
 
   const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.08,
       },
     },
   };
@@ -33,14 +35,33 @@ const SearchResults = () => {
   };
 
   useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const res = await api.get("/genres");
+        if (Array.isArray(res.data)) {
+          setGenres(res.data);
+        }
+      } catch (err) {
+        console.error("Error fetching genres in SearchResults:", err);
+      }
+    };
+    fetchGenres();
+  }, []);
+
+  useEffect(() => {
     const fetchResults = async () => {
       try {
         setLoading(true);
 
-        if (query && query.length >= 3) {
-          const response = await api.get('/novels/search', {
-            params: { query },
-          });
+        const hasQuery = Boolean(query && query.trim().length >= 1);
+        const hasGenre = Boolean(genreParam && genreParam.trim().length >= 1);
+
+        if (hasQuery || hasGenre) {
+          const params = {};
+          if (hasQuery) params.query = query.trim();
+          if (hasGenre) params.genre = genreParam.trim();
+
+          const response = await api.get('/novels/search', { params });
           setResults(response.data);
         } else {
           setResults([]);
@@ -53,10 +74,50 @@ const SearchResults = () => {
       }
     };
 
-    if (query) {
-      fetchResults();
+    fetchResults();
+  }, [query, genreParam]);
+
+  const handleGenreFilterChange = (selectedSlug) => {
+    const newParams = new URLSearchParams();
+    if (query.trim()) {
+      newParams.set("q", query.trim());
     }
-  }, [query]);
+    if (selectedSlug && selectedSlug !== "all") {
+      newParams.set("genre", selectedSlug);
+    }
+    navigate(`/search?${newParams.toString()}`);
+  };
+
+  const currentGenreObj = genres.find(
+    (g) => g.slug === genreParam || g._id === genreParam
+  );
+
+  const getPageTitle = () => {
+    if (query && genreParam) {
+      return (
+        <span>
+          Kết quả tìm kiếm cho &quot;<span className="text-blue-500">{query}</span>&quot; trong thể loại{" "}
+          <span className="text-purple-400">[{currentGenreObj?.name || genreParam}]</span>
+        </span>
+      );
+    }
+    if (genreParam) {
+      return (
+        <span>
+          Danh mục tác phẩm thể loại:{" "}
+          <span className="text-purple-400">{currentGenreObj?.name || genreParam}</span>
+        </span>
+      );
+    }
+    if (query) {
+      return (
+        <span>
+          Kết quả tìm kiếm cho &quot;<span className="text-blue-500">{query}</span>&quot;
+        </span>
+      );
+    }
+    return <span>Khám phá tác phẩm</span>;
+  };
 
   if (loading) {
     return (
@@ -98,107 +159,123 @@ const SearchResults = () => {
         } flex flex-col items-center`}
       >
         <Navbar />
-        <div className="container mx-auto px-4 py-28 flex flex-col items-center">
+        <div className="container mx-auto px-4 pt-28 pb-16 flex flex-col items-center max-w-7xl">
+          {/* Header Title */}
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`text-3xl font-bold mb-8 ${
-              isDarkMode ? "text-white" : "text-gray-800"
+            className={`text-2xl md:text-3xl font-extrabold mb-8 text-center ${
+              isDarkMode ? "text-white" : "text-gray-900"
             }`}
           >
-            Kết quả tìm kiếm cho &quot;{query}&quot;
+            {getPageTitle()}
           </motion.h1>
 
           {results.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={`text-center py-12 ${
+              className={`text-center py-16 ${
                 isDarkMode ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              <p className="text-xl mb-3">Không tìm thấy kết quả nào cho tìm kiếm của bạn.</p>
-              <p
-                className={`${isDarkMode ? "text-gray-500" : "text-gray-500"}`}
-              >
-                Hãy thử các từ khóa khác hoặc kiểm tra lại chính tả.
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-400">
+                <FaSearch size={24} />
+              </div>
+              <p className="text-xl font-bold mb-2">Không tìm thấy tác phẩm phù hợp</p>
+              <p className="text-sm max-w-md mx-auto text-gray-500 mb-6">
+                Không có truyện nào khớp với các tiêu chí tìm kiếm hiện tại. Hãy thử từ khóa khác hoặc chuyển sang thể loại khác.
               </p>
+              {genreParam && (
+                <button
+                  type="button"
+                  onClick={() => handleGenreFilterChange("all")}
+                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-md transition-all"
+                >
+                  Xóa bộ lọc thể loại
+                </button>
+              )}
             </motion.div>
           ) : (
             <motion.div
               variants={container}
               initial="hidden"
               animate="show"
-              className="max-w-[1300px] w-full mx-auto mt-12"
+              className="w-full"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-24 px-4 sm:px-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
                 {results.map((novel) => (
                   <motion.div
                     key={novel._id}
                     variants={item}
-                    whileHover={{ scale: 1.05 }}
+                    whileHover={{ scale: 1.03 }}
                     className={`${
                       isDarkMode
-                        ? "bg-gradient-to-br from-black/50 to-gray-500 hover:bg-gradient-to-br hover:from-gray-900 hover:to-gray-600"
-                        : "bg-gradient-to-br from-gray-200 to-white hover:bg-gradient-to-br hover:from-gray-300 hover:to-gray-100"
-                    } rounded-xl shadow-lg overflow-hidden cursor-pointer transition-all duration-300 w-full max-w-[300px] mx-auto`}
+                        ? "bg-gray-900 border-gray-800 hover:border-gray-700"
+                        : "bg-white border-gray-200 hover:shadow-xl"
+                    } border rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 flex flex-col justify-between`}
                     onClick={() => navigate(`/novels/${novel._id}`)}
                   >
-                    <div className="relative">
+                    <div className="relative h-64 overflow-hidden bg-gray-100 dark:bg-gray-800">
                       <img
-                        src={novel.coverPhoto.url}
+                        src={novel.coverPhoto?.url || "https://images.unsplash.com/photo-1544947950-fa07a98d237f"}
                         alt={novel.title}
-                        className="w-full h-72 object-cover transition-transform duration-300 hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       />
-                      <div
-                        className={`absolute bottom-0 left-0 right-0 ${
-                          isDarkMode
-                            ? "bg-gradient-to-t from-black/80 to-transparent"
-                            : "bg-gradient-to-t from-black/50 to-transparent"
-                        } h-20`}
-                      ></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+                      {/* Genre Tags on Novel Cover Card */}
+                      {novel.genres && novel.genres.length > 0 && (
+                        <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-1.5 z-10">
+                          {novel.genres.map((g) => (
+                            <span
+                              key={g._id || g.slug}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenreFilterChange(g.slug);
+                              }}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow-md backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform"
+                              style={{ backgroundColor: g.color || "#8B5CF6" }}
+                            >
+                              #{g.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="p-6">
-                      <h2
-                        className={`text-xl font-bold mb-3 ${
-                          isDarkMode ? "text-white" : "text-gray-800"
-                        }`}
-                      >
-                        {novel.title}
-                      </h2>
-                      <p
-                        className={`text-sm mb-4 line-clamp-2 ${
-                          isDarkMode ? "text-gray-300" : "text-gray-600"
-                        }`}
-                      >
-                        {novel.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div
-                          className={`flex items-center space-x-4 text-sm ${
-                            isDarkMode ? "text-gray-400" : "text-gray-500"
+
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h2
+                          className={`text-base font-bold mb-1.5 line-clamp-1 ${
+                            isDarkMode ? "text-white" : "text-gray-900"
                           }`}
                         >
+                          {novel.title}
+                        </h2>
+                        <p className="text-xs text-purple-400 font-semibold mb-2">
+                          Tác giả: {novel.author?.penName || "Ẩn danh"}
+                        </p>
+                        <p
+                          className={`text-xs mb-3 line-clamp-2 leading-relaxed ${
+                            isDarkMode ? "text-gray-400" : "text-gray-600"
+                          }`}
+                        >
+                          {novel.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500">
+                        <div className="flex items-center space-x-3">
                           <div className="flex items-center">
-                            <FaHeart className="text-red-500 mr-2" />
+                            <FaHeart className="text-red-500 mr-1.5" />
                             <span>{novel.likes?.length || 0}</span>
                           </div>
                           <div className="flex items-center">
-                            <FaBookOpen className="text-blue-500 mr-2" />
-                            <span>{novel.chapters?.length || 0}</span>
+                            <FaBookOpen className="text-blue-500 mr-1.5" />
+                            <span>{novel.chapters?.length || 0} chương</span>
                           </div>
                         </div>
-                        {novel.genre && (
-                          <span
-                            className={`px-3 py-1 rounded-full text-sm ${
-                              isDarkMode
-                                ? "bg-gray-700 text-gray-300"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {novel.genre}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </motion.div>

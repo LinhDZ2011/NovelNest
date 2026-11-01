@@ -15,7 +15,7 @@ const NovelReviews = ({ reviews, novelId }) => {
   const { isDarkMode } = useContext(DarkModeContext);
 
   const handleReviewLike = async (reviewId, e) => {
-    e.stopPropagation(); // Prevent triggering the review click
+    e.stopPropagation(); // Ngăn chặn kích hoạt sự kiện click vào đánh giá
     try {
       if (!userId || !token) {
         navigate("/login");

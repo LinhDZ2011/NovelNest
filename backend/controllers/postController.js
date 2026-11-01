@@ -2,7 +2,7 @@ const Post = require("../models/Post");
 const User = require("../models/User");
 const { toggleDocumentLike, toggleSubdocumentLike } = require("../utils/likeHelper");
 
-// Create a new post
+// Tạo bài viết mới
 const addPosts = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -18,7 +18,7 @@ const addPosts = async (req, res) => {
             return res.status(400).json({ msg: "Vui lòng chọn tệp hình ảnh" });
         }
 
-        // Check if user exists
+        // Kiểm tra người dùng tồn tại
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ msg: "Không tìm thấy người dùng" });
@@ -36,15 +36,15 @@ const addPosts = async (req, res) => {
             comments: [],
         });
 
-        // Save the post
+        // Lưu bài viết
         await post.save();
 
-        // Add post reference to user's posts array
+        // Thêm tham chiếu bài viết vào mảng posts của người dùng
         if (!user.posts) user.posts = [];
         user.posts.push(post._id);
         await user.save();
 
-        // Populate user info before sending response
+        // Nạp thông tin người dùng trước khi gửi phản hồi
         await post.populate("user", "-password");
 
         return res.status(201).json(post);
@@ -57,7 +57,7 @@ const addPosts = async (req, res) => {
     }
 };
 
-// Get all posts with populated user and comment data
+// Lấy tất cả bài viết kèm dữ liệu người dùng và bình luận
 const getAllPosts = async (req, res) => {
     try {
         const posts = await Post.find()
@@ -72,7 +72,7 @@ const getAllPosts = async (req, res) => {
     }
 };
 
-// Add a comment to a post
+// Thêm bình luận vào bài viết
 const addCommentToPost = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -83,19 +83,19 @@ const addCommentToPost = async (req, res) => {
             return res.status(400).json({ msg: "Vui lòng nhập nội dung bình luận" });
         }
 
-        // Check if user exists
+        // Kiểm tra người dùng tồn tại
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ msg: "Không tìm thấy người dùng" });
         }
 
-        // Find the post
+        // Tìm kiếm bài viết
         const post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({ msg: "Không tìm thấy bài viết" });
         }
 
-        // Add comment to post
+        // Thêm bình luận vào bài viết
         post.comments.push({
             content,
             user: userId,
@@ -104,7 +104,7 @@ const addCommentToPost = async (req, res) => {
 
         await post.save();
 
-        // Populate user info in comments
+        // Nạp thông tin người dùng trong bình luận
         await post.populate("comments.user", "-password");
 
         return res.status(200).json(post);
@@ -117,7 +117,7 @@ const addCommentToPost = async (req, res) => {
     }
 };
 
-// Get a specific post by ID
+// Lấy thông tin bài viết cụ thể theo ID
 const getPostById = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id)
@@ -138,7 +138,7 @@ const getPostById = async (req, res) => {
     }
 };
 
-// Get all posts by a specific user
+// Lấy tất cả bài viết của một người dùng cụ thể
 const getPostsByUserId = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -180,13 +180,13 @@ const togglePostLike = async (req, res) => {
     }
 };
 
-// Like/Unlike a comment
+// Thích hoặc bỏ thích bình luận
 const toggleCommentLike = async (req, res) => {
     try {
         const { userId } = req.body;
         const { postId, commentId } = req.params;
 
-        // Validate inputs
+        // Kiểm tra tính hợp lệ của dữ liệu đầu vào
         if (!userId) {
             return res.status(400).json({ msg: "Yêu cầu có mã người dùng" });
         }
@@ -206,7 +206,7 @@ const toggleCommentLike = async (req, res) => {
     }
 };
 
-// Delete a post
+// Xóa bài viết
 const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
@@ -215,7 +215,7 @@ const deletePost = async (req, res) => {
             return res.status(404).json({ msg: "Không tìm thấy bài viết" });
         }
 
-        // Clean up reference in User.posts
+        // Dọn dẹp tham chiếu trong User.posts
         await User.findByIdAndUpdate(post.user, {
             $pull: { posts: post._id }
         });

@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaBookOpen, FaHeart, FaComments, FaChartLine, FaEdit, FaClock } from "react-icons/fa";
+import { FaBookOpen, FaHeart, FaComments, FaChartLine, FaEdit, FaClock, FaTimes } from "react-icons/fa";
 import DarkModeContext from "../context/DarkModeContext";
 import Navbar from "../components/Navbar";
 import Footer from "../utils/Footer";
@@ -17,6 +17,11 @@ const NovelAnalytics = () => {
     chapterName: "",
     chapterContent: "",
   });
+  const [editingChapter, setEditingChapter] = useState(null);
+  const [editChapterName, setEditChapterName] = useState("");
+  const [editChapterContent, setEditChapterContent] = useState("");
+  const [isFetchingChapter, setIsFetchingChapter] = useState(false);
+  const [isSavingChapter, setIsSavingChapter] = useState(false);
   const { isDarkMode } = useContext(DarkModeContext);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -56,6 +61,47 @@ const NovelAnalytics = () => {
     } catch (error) {
       console.error("Error adding chapter:", error);
       alert("Không thể thêm chương");
+    }
+  };
+
+  const handleOpenEditChapter = async (chapter) => {
+    setEditingChapter(chapter);
+    setEditChapterName(chapter.chapterName || "");
+    setEditChapterContent(chapter.chapterContent || "");
+    setIsFetchingChapter(true);
+    try {
+      const res = await api.get(`/chapters/${novelId}/chapters/${chapter._id}`);
+      if (res.data) {
+        setEditChapterName(res.data.chapterName || "");
+        setEditChapterContent(res.data.chapterContent || "");
+      }
+    } catch (err) {
+      console.error("Error fetching chapter content:", err);
+    } finally {
+      setIsFetchingChapter(false);
+    }
+  };
+
+  const handleSaveEditChapter = async (e) => {
+    e.preventDefault();
+    if (!editingChapter || !editChapterName.trim() || !editChapterContent.trim()) {
+      alert("Vui lòng nhập đầy đủ tiêu đề và nội dung chương.");
+      return;
+    }
+
+    setIsSavingChapter(true);
+    try {
+      await api.put(`/chapters/${novelId}/chapters/${editingChapter._id}`, {
+        chapterName: editChapterName.trim(),
+        chapterContent: editChapterContent.trim(),
+      });
+      await fetchNovelDetails();
+      setEditingChapter(null);
+    } catch (err) {
+      console.error("Error updating chapter:", err);
+      alert("Không thể cập nhật chương. Vui lòng thử lại.");
+    } finally {
+      setIsSavingChapter(false);
     }
   };
 
@@ -333,8 +379,8 @@ const NovelAnalytics = () => {
                                 isDarkMode
                                   ? "bg-gray-700/50 hover:bg-gray-700"
                                   : "bg-white hover:bg-gray-50"
-                              } transition-colors group`}
-                              // onClick={() => navigate(`novels/${novelId}/chapters/${chapter._id}`)}
+                              } border border-transparent hover:border-blue-500/50 transition-all group cursor-pointer`}
+                              onClick={() => handleOpenEditChapter(chapter)}
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
@@ -357,6 +403,16 @@ const NovelAnalytics = () => {
                                     {chapter.chapterName}
                                   </h4>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditChapter(chapter);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 transition-colors shadow-sm"
+                                >
+                                  <FaEdit size={12} /> Sửa nội dung
+                                </button>
                                 {/* <FaChevronRight
                               className={`transform transition-transform ${
                                 isDarkMode ? "text-gray-400" : "text-gray-600"
@@ -448,6 +504,102 @@ const NovelAnalytics = () => {
                 </AnimatePresence>
               </div>
             </div>
+            {/* MODAL CHỈNH SỬA NỘI DUNG CHƯƠNG CHO TÁC GIẢ */}
+            <AnimatePresence>
+              {editingChapter && (
+                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className={`max-w-3xl w-full p-6 md:p-8 rounded-2xl border shadow-2xl ${
+                      isDarkMode
+                        ? "bg-gray-900 border-gray-800 text-white"
+                        : "bg-white border-gray-200 text-gray-900"
+                    } max-h-[90vh] flex flex-col`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-800 mb-6">
+                      <div className="flex items-center gap-2">
+                        <FaEdit className="text-blue-500 text-xl" />
+                        <h3 className="text-xl font-bold">Chỉnh sửa nội dung chương</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditingChapter(null)}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                      >
+                        <FaTimes size={18} />
+                      </button>
+                    </div>
+
+                    {isFetchingChapter ? (
+                      <div className="py-20 flex flex-col items-center justify-center gap-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                        <p className="text-sm text-gray-400">Đang tải nội dung chương...</p>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSaveEditChapter} className="flex-1 flex flex-col space-y-4 overflow-hidden">
+                        <div>
+                          <label className="block text-sm font-semibold mb-2">Tiêu đề chương</label>
+                          <input
+                            type="text"
+                            value={editChapterName}
+                            onChange={(e) => setEditChapterName(e.target.value)}
+                            required
+                            className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-all ${
+                              isDarkMode
+                                ? "bg-gray-800 border-gray-700 text-white focus:border-blue-500"
+                                : "bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="flex-1 flex flex-col min-h-[260px]">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-semibold">Nội dung văn bản chương</label>
+                            <span className="text-xs text-gray-400">
+                              {editChapterContent.split(/\s+/).filter(Boolean).length} từ • {editChapterContent.length} ký tự
+                            </span>
+                          </div>
+                          <textarea
+                            value={editChapterContent}
+                            onChange={(e) => setEditChapterContent(e.target.value)}
+                            required
+                            rows={12}
+                            className={`w-full flex-1 p-4 rounded-xl border text-sm outline-none leading-relaxed resize-y ${
+                              isDarkMode
+                                ? "bg-gray-800 border-gray-700 text-white focus:border-blue-500"
+                                : "bg-gray-50 border-gray-200 text-gray-900 focus:border-blue-500"
+                            }`}
+                            placeholder="Nhập nội dung văn bản chương truyện..."
+                          />
+                        </div>
+
+                        <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                          <button
+                            type="button"
+                            disabled={isSavingChapter}
+                            onClick={() => setEditingChapter(null)}
+                            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            Hủy bỏ
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isSavingChapter}
+                            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
+                          >
+                            {isSavingChapter ? "Đang lưu..." : "Lưu thay đổi"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
             <Footer />
           </div>
         </>

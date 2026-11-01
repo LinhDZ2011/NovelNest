@@ -11,9 +11,11 @@ import Dashboard from "./pages/Dashboard";
 import Rankings from "./pages/Rankings";
 import ForumPage from "./pages/ForumPage";
 import NovelAnalytics from "./pages/NovelAnalytics";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFoundPage from './pages/404Page';
 import { DarkModeProvider } from "./context/DarkModeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
 const App = () => {
   return (
@@ -34,6 +36,10 @@ const App = () => {
           <Route path="/profile" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/forum" element={<ProtectedRoute><ForumPage /></ProtectedRoute>} />
           <Route path="/novel-analytics/:novelId" element={<ProtectedRoute><NovelAnalytics /></ProtectedRoute>} />
+          
+          {/* Admin Portal Route Guarded by AdminRoute */}
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>

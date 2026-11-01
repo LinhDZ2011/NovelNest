@@ -1,6 +1,6 @@
-import { useState, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import api from "../services/api";
-import { FaTimes, FaCloudUploadAlt, FaYoutube, FaImage, FaVideo, FaExclamationCircle } from "react-icons/fa";
+import { FaTimes, FaCloudUploadAlt, FaYoutube, FaImage, FaVideo, FaExclamationCircle, FaTags, FaCheck } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import DarkModeContext from "../context/DarkModeContext";
 
@@ -10,19 +10,41 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
     description: "",
     coverPhoto: null,
     introVideo: "",
-    videoType: "youtube", // 'youtube' or 'file'
+    videoType: "youtube", // 'youtube' hoặc 'file'
   });
+  const [genresList, setGenresList] = useState([]);
+  const [selectedGenres, setSelectedGenres] = useState([]);
   const [error, setError] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isDarkMode } = useContext(DarkModeContext);
 
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const res = await api.get("/genres");
+        if (Array.isArray(res.data)) {
+          setGenresList(res.data);
+        }
+      } catch (err) {
+        console.error("Error fetching genres:", err);
+      }
+    };
+    fetchGenres();
+  }, []);
+
+  const toggleGenre = (genreId) => {
+    setSelectedGenres((prev) =>
+      prev.includes(genreId) ? prev.filter((id) => id !== genreId) : [...prev, genreId]
+    );
+  };
+
   const handleCoverPhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
+        // Giới hạn 5MB
         setError("Kích thước ảnh phải nhỏ hơn 5MB");
         return;
       }
@@ -35,7 +57,7 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 50 * 1024 * 1024) {
-        // 50MB limit
+        // Giới hạn 50MB
         setError("Kích thước video phải nhỏ hơn 50MB");
         return;
       }
@@ -48,7 +70,7 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
     const url = e.target.value;
     setNewNovel({ ...newNovel, introVideo: url, videoType: "youtube" });
 
-    // Extract video ID for preview
+    // Trích xuất mã ID video để hiển thị xem trước
     let videoId = "";
     if (url.includes("youtube.com/watch?v=")) {
       videoId = url.split("watch?v=")[1].split("&")[0];
@@ -65,6 +87,12 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (selectedGenres.length === 0) {
+      setError("Vui lòng chọn ít nhất 1 thể loại cho tác phẩm của bạn");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -72,6 +100,7 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
       formData.append("title", newNovel.title);
       formData.append("description", newNovel.description);
       formData.append("authorId", authorData._id);
+      formData.append("genres", JSON.stringify(selectedGenres));
 
       if (newNovel.coverPhoto) {
         formData.append("coverPhoto", newNovel.coverPhoto);
@@ -236,7 +265,7 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
                         isDarkMode ? "text-gray-300" : "text-gray-700"
                       } mb-2 font-medium`}
                     >
-                      Mô tả
+                      Mô tả cốt truyện
                     </label>
                     <textarea
                       value={newNovel.description}
@@ -250,10 +279,61 @@ const UploadNovel = ({ authorData, onNovelCreated, onClose }) => {
                         isDarkMode
                           ? "bg-gray-800/50 border-gray-700 text-white"
                           : "bg-white border-gray-200"
-                      } border focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 h-64`}
+                      } border focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 h-44`}
                       placeholder="Viết phần mô tả cuốn hút cho tác phẩm của bạn..."
                       required
                     />
+                  </motion.div>
+
+                  {/* CHỌN THỂ LOẠI CHO TRUYỆN */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <label
+                        className={`flex items-center gap-2 font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
+                      >
+                        <FaTags className="text-purple-400" />
+                        <span>Thể loại tác phẩm (chọn 1 hoặc nhiều)</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-xs text-purple-400 font-semibold">
+                        Đã chọn: {selectedGenres.length}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`p-3 rounded-xl border max-h-40 overflow-y-auto ${
+                        isDarkMode ? "bg-gray-800/40 border-gray-700" : "bg-gray-50 border-gray-200"
+                      } flex flex-wrap gap-2`}
+                    >
+                      {genresList.map((genre) => {
+                        const isSelected = selectedGenres.includes(genre._id);
+                        return (
+                          <button
+                            type="button"
+                            key={genre._id}
+                            onClick={() => toggleGenre(genre._id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                              isSelected
+                                ? "text-white shadow-md scale-105"
+                                : isDarkMode
+                                ? "bg-gray-700/60 text-gray-300 hover:bg-gray-700"
+                                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                            }`}
+                            style={isSelected ? { backgroundColor: genre.color || "#8B5CF6" } : {}}
+                          >
+                            {isSelected && <FaCheck size={10} />}
+                            <span>{genre.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 </div>
 

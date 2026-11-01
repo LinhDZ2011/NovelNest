@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'author', 'admin'],
     default: 'user'
   },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
   userimage: {
     type: String,
     default: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167'
@@ -43,7 +48,7 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password before saving
+// Tự động mã hóa mật khẩu trước khi lưu vào cơ sở dữ liệu
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
@@ -56,7 +61,7 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare password
+// Phương thức so sánh mật khẩu ứng viên với mật khẩu đã băm (hash)
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcryptjs.compare(candidatePassword, this.password);
 };
